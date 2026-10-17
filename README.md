@@ -12,6 +12,9 @@
 
 One player, two crops - press A/D as fast as possible to harvest crops in time. If a crop is harvested too early you lose a life (say 3 lives) and if a crop isn't harvested in time you lose?
 
+## 2 person game, 1 button each
+
+control different leg with each button (A and L or smth), hold both to jump
 --------------------------
 
 ## counting sort
