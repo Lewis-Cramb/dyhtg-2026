@@ -1,46 +1,144 @@
 import pygame as pg
 
 pg.init()
-running=True
-screen = pg.display.set_mode((720,720))
-clock = pg.time.Clock()
 
-def movement(direction, coord):
-    if direction == "jump":
-        print(direction)
-        coord -= 10
-        return coord
-    elif direction == "left":
-        print(direction)
-        coord -= 10
-        return coord
-    elif direction == "right":
-        print(direction)
-        coord += 10
-        return coord
+WIDTH, HEIGHT = 720, 720
+screen = pg.display.set_mode((WIDTH, HEIGHT))
+pg.display.set_caption("Two Legs, Zero Rhythm")
 
-x, y = 0, 720
+clock = pg.time.Clock()  # controls the frame rate
+font = pg.font.Font(None, 36)  # default font, size 36
 
-while running: #while game is running
+#  character position
+x, y = 100, 500
+active_leg = None  # tracks which leg moved last
 
+# game state
+score = 0
+combo = 0
+last_leg = None
+stumbles = 0
+message = "Alternate A and L to walk!"
+
+# rhythm settings
+BPM = 100  # beats per minute
+BEAT_INTERVAL = 60000 / BPM  # time between beats in milliseconds
+start_time = pg.time.get_ticks()  # time when rhythm starts
+
+running = True
+
+
+def check_rhythm():
+    now = pg.time.get_ticks()
+    elapsed = now - start_time  # time since game started
+
+    beat_position = elapsed % BEAT_INTERVAL  # position within current beat
+
+    # find how close the key press was to the nearest beat
+    error = min(beat_position, BEAT_INTERVAL - beat_position)
+
+    if error < 80:
+        return 300, "PERFECT!"
+    elif error < 150:
+        return 200, "GREAT!"
+    elif error < 220:
+        return 100, "GOOD!"
+    else:
+        return 0, "MISS!"
+
+
+def take_step(leg):
+    global x, score, combo, last_leg
+    global stumbles, active_leg, message
+
+    # pressing the same leg twice causes a stumble
+    if leg == last_leg:
+        combo = 0
+        stumbles += 1
+        message = "STUMBLE!"
+        return  # exit without moving
+
+    points, message = check_rhythm()  # get timing score and feedback
+
+    x += 12  # correct alternating steps move character forward
+
+    if points > 0:
+        combo += 1
+        score += points
+    else:
+        combo = 0  # missing the beat breaks the combo
+
+    last_leg = leg  # remember for the next step
+    active_leg = leg  # used to draw the moving leg
+
+
+def draw_character():
+    # head
+    pg.draw.circle(screen, (255, 205, 150), (x + 25, y), 20)
+
+    # body
+    pg.draw.rect(screen, (230, 80, 90), (x + 5, y + 20, 40, 60))
+
+    # change leg positions depending on which key was pressed
+    left_offset = -15 if active_leg == "left" else 0
+    right_offset = 15 if active_leg == "right" else 0
+
+    # left leg (blue)
+    pg.draw.line(
+        screen, (60, 150, 255),
+        (x + 15, y + 80),
+        (x + 15 + left_offset, y + 120),
+        9
+    )
+
+    # right leg (pink)
+    pg.draw.line(
+        screen, (255, 100, 170),
+        (x + 35, y + 80),
+        (x + 35 + right_offset, y + 120),
+        9
+    )
+
+
+while running:
     for event in pg.event.get():
         if event.type == pg.QUIT:
-            running=False
+            running = False
 
+        if event.type == pg.KEYDOWN:  # detect individual key presses
+            if event.key == pg.K_a:
+                take_step("left")
+            elif event.key == pg.K_l:
+                take_step("right")
 
-    keys = pg.key.get_pressed() #this returns a dict of all keys, True if pressed or False if not
-    if keys[pg.K_a] and keys[pg.K_l]: #Therefore, this checks if keys[pg.K_a] is true => a is pressed
-        y = movement("jump",y)
-    elif keys[pg.K_a]:
-        x = movement("left",x)
-    elif keys[pg.K_l]:
-        x = movement("right",x)
+    screen.fill((25, 25, 35))  # clear previous frame
 
-    screen.fill((0,0,0))
-    pg.draw.rect(screen, pg.Color(255,0,0), (x,y,50,50))
+    # draw ground
+    pg.draw.rect(screen, (80, 180, 100), (0, 620, WIDTH, 100))
 
-    pg.display.flip()
-    clock.tick(60)
+    draw_character()
+
+    # create text surfaces
+    score_text = font.render(f"Score: {score}", True, "white")
+    combo_text = font.render(f"Combo: {combo}", True, "white")
+    stumble_text = font.render(f"Stumbles: {stumbles}", True, "white")
+    message_text = font.render(message, True, "white")
+
+    # display text at specified coordinates
+    screen.blit(score_text, (20, 20))
+    screen.blit(combo_text, (20, 60))
+    screen.blit(stumble_text, (20, 100))
+    screen.blit(message_text, (20, 150))
+
+    # calculate progress through the current beat (0 to 1)
+    elapsed = pg.time.get_ticks() - start_time
+    beat_phase = (elapsed % BEAT_INTERVAL) / BEAT_INTERVAL
+
+    # circle shrinks as the next beat approaches
+    radius = 15 + int(10 * (1 - beat_phase))
+    pg.draw.circle(screen, (255, 220, 70), (650, 70), radius)
+
+    pg.display.flip()  # update the screen
+    clock.tick(60)  # limit to 60 FPS
 
 pg.quit()
-
