@@ -20,6 +20,13 @@ last_leg = None
 stumbles = 0
 message = "Alternate A and L to walk!"
 
+# jumping vars
+
+vel = 5
+grav = 1.5
+jmp_strgth = -12
+jumping = False
+
 # rhythm settings
 BPM = 100  # beats per minute
 BEAT_INTERVAL = 60000 / BPM  # time between beats in milliseconds
@@ -115,6 +122,21 @@ while running:
 
     # draw ground
     pg.draw.rect(screen, (80, 180, 100), (0, 620, WIDTH, 100))
+
+    # detect jumping
+    keys = pg.key.get_pressed()
+    if keys[pg.K_a] & keys[pg.K_l]:
+        jumping = True
+        vel = jmp_strgth
+
+    if jumping:
+        y += vel
+        vel += grav
+        if y >= 500: #through floor
+            y = 500
+            vel = 0
+            jumping=False
+
 
     draw_character()
 
