@@ -38,6 +38,8 @@ grav = 1
 jmp_strgth = -20
 jumping = False
 
+xDist = 12
+
 BPM = 100  
 BEAT_INTERVAL = 60000 / BPM  
 start_time = pg.time.get_ticks()  
@@ -269,6 +271,22 @@ while running:
             status = "won"
             message = "YOU WIN! Press R to restart"
 
+        # detect jumping
+        keys = pg.key.get_pressed()
+        if keys[pg.K_a] & keys[pg.K_l] and not jumping: #last clause stops flying
+            jumping = True
+            vel = jmp_strgth
+
+        if jumping:
+            y += vel
+            vel += grav
+            xDist = 20
+            if y >= 500: #through floor
+                y = 500
+                vel = 0
+                jumping=False
+                xDist=12
+
     camera_x = round(max(0, x + 25 - 180))  # camera follows character
 
     
@@ -290,21 +308,6 @@ while running:
     # draw ground
     course.draw(screen, camera_x)
 
-    # detect jumping
-    keys = pg.key.get_pressed()
-    if keys[pg.K_a] & keys[pg.K_l] and not jumping: #last clause stops flying
-        jumping = True
-        vel = jmp_strgth
-
-        if jumping:
-            y += vel
-            vel += grav
-            xDist = 20
-            if y >= 500: #through floor
-                y = 500
-                vel = 0
-                jumping=False
-                xDist=12
 
     camera_x = round(max(0, x + 25 - 180))  # camera follows character
 
