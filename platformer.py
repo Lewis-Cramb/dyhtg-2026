@@ -24,16 +24,16 @@ stumbles = 0
 message = "Alternate A and L to walk!"
 course = ObstacleCourse()  # create the obstacle course
 
-velocity_y = 0
-on_ground = True
 status = "playing"
 
 # jumping vars
 
 vel = 5
-grav = 1.5
-jmp_strgth = -12
+grav = 1
+jmp_strgth = -20
 jumping = False
+
+xDist = 12
 
 # rhythm settings
 BPM = 100  # beats per minute
@@ -75,7 +75,7 @@ def take_step(leg):
 
     points, message = check_rhythm()  # get timing score and feedback
 
-    x += 12  # correct alternating steps move character forward
+    x += xDist  # correct alternating steps move character forward
 
     if points > 0:
         combo += 1
@@ -127,12 +127,7 @@ while running:
 
         if event.type == pg.KEYDOWN:  # detect individual key presses
             if status == "playing":
-                keys = pg.key.get_pressed()
-
-                if keys[pg.K_a] and keys[pg.K_l] and on_ground:
-                    velocity_y = -730
-                    on_ground = False
-                elif event.key == pg.K_a:
+                if event.key == pg.K_a:
                     take_step("left")
                 elif event.key == pg.K_l:
                     take_step("right")
@@ -151,22 +146,8 @@ while running:
                 start_time = pg.time.get_ticks()
 
     if status == "playing":
-        velocity_y += 1700 * dt
-        y += velocity_y * dt
-
-        if not on_ground:
-            x += 180 * dt  # move forward while jumping
 
         player_rect = pg.Rect(round(x + 5), round(y - 20), 40, 140)
-
-        # land only where ground exists
-        if player_rect.bottom >= course.ground_y and course.has_ground_below(player_rect):
-            y = course.ground_y - 120
-            velocity_y = 0
-            on_ground = True
-            player_rect = pg.Rect(round(x + 5), round(y - 20), 40, 140)
-        else:
-            on_ground = False
 
         if course.check_collision(player_rect) is not None or player_rect.top > HEIGHT:
             status = "crashed"
@@ -175,27 +156,28 @@ while running:
             status = "won"
             message = "YOU WIN! Press R to restart"
 
+        # detect jumping
+        keys = pg.key.get_pressed()
+        if keys[pg.K_a] & keys[pg.K_l] and not jumping: #last clause stops flying
+            jumping = True
+            vel = jmp_strgth
+
+        if jumping:
+            y += vel
+            vel += grav
+            xDist = 20
+            if y >= 500: #through floor
+                y = 500
+                vel = 0
+                jumping=False
+                xDist=12
+
     camera_x = round(max(0, x + 25 - 180))  # camera follows character
 
     screen.fill((25, 25, 35))  # clear previous frame
 
     # draw ground
     course.draw(screen, camera_x)
-
-    # detect jumping
-    keys = pg.key.get_pressed()
-    if keys[pg.K_a] & keys[pg.K_l] and not jumping: #last clause stops flying
-        jumping = True
-        vel = jmp_strgth
-
-    if jumping:
-        y += vel
-        vel += grav
-        if y >= 500: #through floor
-            y = 500
-            vel = 0
-            jumping=False
-
 
     draw_character()
 
