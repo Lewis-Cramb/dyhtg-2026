@@ -246,19 +246,19 @@ while running:
                     take_step("left")
                 elif event.key == pg.K_l:
                     take_step("right")
-
-            if event.key == pg.K_r:
-                x, y = 100, 500
-                velocity_y = 0
-                on_ground = True
-                status = "playing"
-                score = 0
-                combo = 0
-                last_leg = None
-                active_leg = None
-                stumbles = 0
-                message = "Alternate A and L to walk!"
-                start_time = pg.time.get_ticks()
+        keys = pg.key.get_pressed()
+        if keys[pg.K_a] and keys[pg.K_l] and status != "playing":
+            x, y = 100, 500
+            velocity_y = 0
+            on_ground = True
+            status = "playing"
+            score = 0
+            combo = 0
+            last_leg = None
+            active_leg = None
+            stumbles = 0
+            message = "Alternate A and L to walk!"
+            start_time = pg.time.get_ticks()   
 
     if status == "playing":
 
@@ -266,16 +266,16 @@ while running:
 
         if course.check_collision(player_rect) is not None or player_rect.top > HEIGHT:
             status = "crashed"
-            message = "CRASH! Press R to restart"
+            message = "CRASH! Press A and L to restart"
         elif course.reached_finish(player_rect):
             status = "won"
-            message = "YOU WIN! Press R to restart"
+            message = "YOU WIN! Press A and L to restart"
 
         # detect jumping
         keys = pg.key.get_pressed()
         if keys[pg.K_a] & keys[pg.K_l] and not jumping: #last clause stops flying
             jumping = True
-            vel = jmp_strgth
+            vel = jmp_strgth        
 
         if jumping:
             y += vel
