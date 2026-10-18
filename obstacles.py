@@ -28,22 +28,22 @@ class ObstacleCourse:
     def check_collision(self, player_rect):
         """Check if the player touches a rock or spikes."""
 
-        for obstacle in self.obstacles:
+        # for obstacle in self.obstacles:
 
-            # gaps are handled separately by the physics system
-            if obstacle["type"] == "gap":
-                continue
+        #     # gaps are handled separately by the physics system
+        #     if obstacle["type"] == "gap":
+        #         continue
 
-            # create an invisible rectangle around the obstacle
-            obstacle_rect = pg.Rect(
-                obstacle["x"],
-                self.ground_y - obstacle["height"],
-                obstacle["width"],
-                obstacle["height"]
-            )
+        #     # create an invisible rectangle around the obstacle
+        #     obstacle_rect = pg.Rect(
+        #         obstacle["x"],
+        #         self.ground_y - obstacle["height"],
+        #         obstacle["width"],
+        #         obstacle["height"]
+        #     )
 
-            if player_rect.colliderect(obstacle_rect):
-                return obstacle  # return the obstacle that was hit
+        #     if player_rect.colliderect(obstacle_rect):
+        #         return obstacle  # return the obstacle that was hit
 
         return None  # no collision
 
