@@ -8,6 +8,7 @@ pg.display.set_caption("Two Legs, Zero Rhythm")
 
 clock = pg.time.Clock()  # controls the frame rate
 font = pg.font.Font(None, 36)  # default font, size 36
+bold_font = pg.font.SysFont(None, 36, pg.font.Font.bold)
 
 #  character position
 x, y = 100, 500
@@ -122,13 +123,38 @@ while running:
     score_text = font.render(f"Score: {score}", True, "white")
     combo_text = font.render(f"Combo: {combo}", True, "white")
     stumble_text = font.render(f"Stumbles: {stumbles}", True, "white")
-    message_text = font.render(message, True, "white")
+    if message == "MISS!" or message == "STUMBLE!":
+        message_text = font.render(message, True, "red")
+
+        if message == "STUMBLE!":
+            text_pos = 300
+            p1 = pg.transform.scale(pg.image.load("Picture1.png"), (200,100))
+            screen.blit(p1, (text_pos-40,110))
+        else:
+            text_pos = 330
+            p1 = pg.transform.scale(pg.image.load("Picture1.png"), (120,100))
+            screen.blit(p1, (text_pos-27,110))
+            
+            
+    elif message == "GOOD!":
+        message_text = font.render(message, True, "green1")
+        text_pos = 320
+    elif message == "GREAT!":
+        message_text = font.render(message, True, "green2")
+        text_pos = 310
+    elif message == "PERFECT!":
+        message_text = bold_font.render(message, True, "green3")
+        text_pos = 300
+    else:
+        message_text = font.render(message, True, "white")
+        text_pos = 200
+
 
     # display text at specified coordinates
     screen.blit(score_text, (20, 20))
-    screen.blit(combo_text, (20, 60))
-    screen.blit(stumble_text, (20, 100))
-    screen.blit(message_text, (20, 150))
+    screen.blit(combo_text, (300, 20))
+    screen.blit(stumble_text, (560, 20))
+    screen.blit(message_text, (text_pos, 150))
 
     # calculate progress through the current beat (0 to 1)
     elapsed = pg.time.get_ticks() - start_time
@@ -136,7 +162,9 @@ while running:
 
     # circle shrinks as the next beat approaches
     radius = 15 + int(10 * (1 - beat_phase))
-    pg.draw.circle(screen, (255, 220, 70), (650, 70), radius)
+    pg.draw.circle(screen, "yellow", (360, 250), radius)
+    pg.draw.circle(screen, "black", (360, 250), radius-5)
+    pg.draw.circle(screen, "yellow", (360, 250), 10)
 
     pg.display.flip()  # update the screen
     clock.tick(60)  # limit to 60 FPS
