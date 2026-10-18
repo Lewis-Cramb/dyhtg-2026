@@ -125,7 +125,7 @@ while running:
 
     # detect jumping
     keys = pg.key.get_pressed()
-    if keys[pg.K_a] & keys[pg.K_l]:
+    if keys[pg.K_a] & keys[pg.K_l] and not jumping: #last clause stops flying
         jumping = True
         vel = jmp_strgth
 
