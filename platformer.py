@@ -1,8 +1,10 @@
+
 import pygame as pg
 import random
 import math
 from array import array 
 
+from obstacles import ObstacleCourse
 
 pg.init()
 pg.mixer.init()
@@ -11,8 +13,9 @@ WIDTH, HEIGHT = 720, 720
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption("Two Legs, Zero Rhythm")
 
-clock = pg.time.Clock()  
-font = pg.font.Font(None, 36)  
+clock = pg.time.Clock()  # controls the frame rate
+font = pg.font.Font(None, 36)  # default font, size 36
+bold_font = pg.font.SysFont(None, 36, pg.font.Font.bold)
 
 #  character position
 x, y = 100, 500
@@ -24,6 +27,18 @@ combo = 0
 last_leg = None
 stumbles = 0
 message = "Alternate A and L to walk!"
+course = ObstacleCourse()  # create the obstacle course
+
+velocity_y = 0
+on_ground = True
+status = "playing"
+
+# jumping vars
+
+vel = 5
+grav = 1.5
+jmp_strgth = -12
+jumping = False
 
 BPM = 100  
 BEAT_INTERVAL = 60000 / BPM  
@@ -219,15 +234,63 @@ def draw_character():
 last_beat = -1
 
 while running:
+    dt = min(clock.tick(60) / 1000, 0.05)
+
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False
 
         if event.type == pg.KEYDOWN:  # detect individual key presses
-            if event.key == pg.K_a:
-                take_step("left")
-            elif event.key == pg.K_l:
-                take_step("right")
+            if status == "playing":
+                keys = pg.key.get_pressed()
+
+                if keys[pg.K_a] and keys[pg.K_l] and on_ground:
+                    velocity_y = -730
+                    on_ground = False
+                elif event.key == pg.K_a:
+                    take_step("left")
+                elif event.key == pg.K_l:
+                    take_step("right")
+
+            if event.key == pg.K_r:
+                x, y = 100, 500
+                velocity_y = 0
+                on_ground = True
+                status = "playing"
+                score = 0
+                combo = 0
+                last_leg = None
+                active_leg = None
+                stumbles = 0
+                message = "Alternate A and L to walk!"
+                start_time = pg.time.get_ticks()
+
+    if status == "playing":
+        velocity_y += 1700 * dt
+        y += velocity_y * dt
+
+        if not on_ground:
+            x += 180 * dt  # move forward while jumping
+
+        player_rect = pg.Rect(round(x + 5), round(y - 20), 40, 140)
+
+        # land only where ground exists
+        if player_rect.bottom >= course.ground_y and course.has_ground_below(player_rect):
+            y = course.ground_y - 120
+            velocity_y = 0
+            on_ground = True
+            player_rect = pg.Rect(round(x + 5), round(y - 20), 40, 140)
+        else:
+            on_ground = False
+
+        if course.check_collision(player_rect) is not None or player_rect.top > HEIGHT:
+            status = "crashed"
+            message = "CRASH! Press R to restart"
+        elif course.reached_finish(player_rect):
+            status = "won"
+            message = "YOU WIN! Press R to restart"
+
+    camera_x = round(max(0, x + 25 - 180))  # camera follows character
 
     
     elapsed = pg.time.get_ticks() - start_time
@@ -246,7 +309,22 @@ while running:
     screen.fill((25, 25, 35))  # clear previous frame
 
     # draw ground
-    pg.draw.rect(screen, (80, 180, 100), (0, 620, WIDTH, 100))
+    course.draw(screen, camera_x)
+
+    # detect jumping
+    keys = pg.key.get_pressed()
+    if keys[pg.K_a] & keys[pg.K_l] and not jumping: #last clause stops flying
+        jumping = True
+        vel = jmp_strgth
+
+    if jumping:
+        y += vel
+        vel += grav
+        if y >= 500: #through floor
+            y = 500
+            vel = 0
+            jumping=False
+
 
     draw_character()
 
@@ -254,13 +332,38 @@ while running:
     score_text = font.render(f"Score: {score}", True, "white")
     combo_text = font.render(f"Combo: {combo}", True, "white")
     stumble_text = font.render(f"Stumbles: {stumbles}", True, "white")
-    message_text = font.render(message, True, "white")
+    if message == "MISS!" or message == "STUMBLE!":
+        message_text = font.render(message, True, "red")
+
+        if message == "STUMBLE!":
+            text_pos = 300
+            p1 = pg.transform.scale(pg.image.load("Picture1.png"), (200,100))
+            screen.blit(p1, (text_pos-40,110))
+        else:
+            text_pos = 330
+            p1 = pg.transform.scale(pg.image.load("Picture1.png"), (120,100))
+            screen.blit(p1, (text_pos-27,110))
+            
+            
+    elif message == "GOOD!":
+        message_text = font.render(message, True, "green1")
+        text_pos = 320
+    elif message == "GREAT!":
+        message_text = font.render(message, True, "green2")
+        text_pos = 310
+    elif message == "PERFECT!":
+        message_text = bold_font.render(message, True, "green3")
+        text_pos = 300
+    else:
+        message_text = font.render(message, True, "white")
+        text_pos = 200
+
 
     # display text at specified coordinates
     screen.blit(score_text, (20, 20))
-    screen.blit(combo_text, (20, 60))
-    screen.blit(stumble_text, (20, 100))
-    screen.blit(message_text, (20, 150))
+    screen.blit(combo_text, (300, 20))
+    screen.blit(stumble_text, (560, 20))
+    screen.blit(message_text, (text_pos, 150))
 
     # calculate progress through the current beat (0 to 1)
     elapsed = pg.time.get_ticks() - start_time
@@ -268,9 +371,10 @@ while running:
 
     # circle shrinks as the next beat approaches
     radius = 15 + int(10 * (1 - beat_phase))
-    pg.draw.circle(screen, (255, 220, 70), (650, 70), radius)
+    pg.draw.circle(screen, "yellow", (360, 250), radius)
+    pg.draw.circle(screen, "black", (360, 250), radius-5)
+    pg.draw.circle(screen, "yellow", (360, 250), 10)
 
     pg.display.flip()  # update the screen
-    clock.tick(60)  # limit to 60 FPS
 
 pg.quit()
