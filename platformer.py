@@ -1,4 +1,6 @@
+
 import pygame as pg
+from obstacles import ObstacleCourse
 
 pg.init()
 
@@ -20,6 +22,11 @@ combo = 0
 last_leg = None
 stumbles = 0
 message = "Alternate A and L to walk!"
+course = ObstacleCourse()  # create the obstacle course
+
+velocity_y = 0
+on_ground = True
+status = "playing"
 
 # rhythm settings
 BPM = 100  # beats per minute
@@ -73,12 +80,15 @@ def take_step(leg):
     active_leg = leg  # used to draw the moving leg
 
 
-def draw_character():
+def draw_character(camera_x=0):
+    draw_x = round(x - camera_x)  # account for camera scrolling
+    draw_y = round(y)
+
     # head
-    pg.draw.circle(screen, (255, 205, 150), (x + 25, y), 20)
+    pg.draw.circle(screen, (255, 205, 150), (draw_x + 25, draw_y), 20)
 
     # body
-    pg.draw.rect(screen, (230, 80, 90), (x + 5, y + 20, 40, 60))
+    pg.draw.rect(screen, (230, 80, 90), (draw_x + 5, draw_y + 20, 40, 60))
 
     # change leg positions depending on which key was pressed
     left_offset = -15 if active_leg == "left" else 0
@@ -87,37 +97,85 @@ def draw_character():
     # left leg (blue)
     pg.draw.line(
         screen, (60, 150, 255),
-        (x + 15, y + 80),
-        (x + 15 + left_offset, y + 120),
+        (draw_x + 15, draw_y + 80),
+        (draw_x + 15 + left_offset, draw_y + 120),
         9
     )
 
     # right leg (pink)
     pg.draw.line(
         screen, (255, 100, 170),
-        (x + 35, y + 80),
-        (x + 35 + right_offset, y + 120),
+        (draw_x + 35, draw_y + 80),
+        (draw_x + 35 + right_offset, draw_y + 120),
         9
     )
 
 
 while running:
+    dt = min(clock.tick(60) / 1000, 0.05)
+
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False
 
         if event.type == pg.KEYDOWN:  # detect individual key presses
-            if event.key == pg.K_a:
-                take_step("left")
-            elif event.key == pg.K_l:
-                take_step("right")
+            if status == "playing":
+                keys = pg.key.get_pressed()
+
+                if keys[pg.K_a] and keys[pg.K_l] and on_ground:
+                    velocity_y = -730
+                    on_ground = False
+                elif event.key == pg.K_a:
+                    take_step("left")
+                elif event.key == pg.K_l:
+                    take_step("right")
+
+            if event.key == pg.K_r:
+                x, y = 100, 500
+                velocity_y = 0
+                on_ground = True
+                status = "playing"
+                score = 0
+                combo = 0
+                last_leg = None
+                active_leg = None
+                stumbles = 0
+                message = "Alternate A and L to walk!"
+                start_time = pg.time.get_ticks()
+
+    if status == "playing":
+        velocity_y += 1700 * dt
+        y += velocity_y * dt
+
+        if not on_ground:
+            x += 180 * dt  # move forward while jumping
+
+        player_rect = pg.Rect(round(x + 5), round(y - 20), 40, 140)
+
+        # land only where ground exists
+        if player_rect.bottom >= course.ground_y and course.has_ground_below(player_rect):
+            y = course.ground_y - 120
+            velocity_y = 0
+            on_ground = True
+            player_rect = pg.Rect(round(x + 5), round(y - 20), 40, 140)
+        else:
+            on_ground = False
+
+        if course.check_collision(player_rect) is not None or player_rect.top > HEIGHT:
+            status = "crashed"
+            message = "CRASH! Press R to restart"
+        elif course.reached_finish(player_rect):
+            status = "won"
+            message = "YOU WIN! Press R to restart"
+
+    camera_x = round(max(0, x + 25 - 180))  # camera follows character
 
     screen.fill((25, 25, 35))  # clear previous frame
 
     # draw ground
-    pg.draw.rect(screen, (80, 180, 100), (0, 620, WIDTH, 100))
+    course.draw(screen, camera_x)
 
-    draw_character()
+    draw_character(camera_x)
 
     # create text surfaces
     score_text = font.render(f"Score: {score}", True, "white")
@@ -167,6 +225,5 @@ while running:
     pg.draw.circle(screen, "yellow", (360, 250), 10)
 
     pg.display.flip()  # update the screen
-    clock.tick(60)  # limit to 60 FPS
 
 pg.quit()
